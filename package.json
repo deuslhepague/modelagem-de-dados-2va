@@ -1,0 +1,40 @@
+{
+  "name": "dw-tse-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.29.0",
+    "@fontsource/plus-jakarta-sans": "^5.1.0",
+    "@fontsource/space-grotesk": "^5.1.0",
+    "@tanstack/react-table": "^8.21.2",
+    "clsx": "^2.1.1",
+    "echarts": "^5.6.0",
+    "lucide-react": "^1.16.0",
+    "motion": "^12.4.7",
+    "react": "^19.0.0",
+    "react-brazil-map": "^1.0.1",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.2",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vitest": "^3.0.5"
+  }
+}
