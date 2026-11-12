@@ -45,6 +45,7 @@ def _corrigir_encoding_texto(df: pd.DataFrame) -> pd.DataFrame:
             df[col]
             .astype(str)
             .str.replace("????", "çã", regex=False)
+            .str.replace("??", "ã", regex=False)
         )
     return df
 

@@ -53,7 +53,7 @@ st.sidebar.subheader("🔍 Filtros Globais (Visão Geral)")
 
 @st.cache_data(ttl=3600)
 def carregar_opcoes_filtros():
-    anos = executar_consulta('SELECT DISTINCT ano FROM dim_data ORDER BY ano;')["ano"].tolist()
+    anos = executar_consulta('SELECT DISTINCT ano FROM dim_data WHERE ano > 0 ORDER BY ano;')["ano"].tolist()
     regioes = executar_consulta('SELECT DISTINCT regiao FROM dim_municipio WHERE regiao IS NOT NULL ORDER BY regiao;')["regiao"].tolist()
     ufs = executar_consulta('SELECT DISTINCT uf FROM dim_municipio WHERE uf IS NOT NULL ORDER BY uf;')["uf"].tolist()
     eleicoes = executar_consulta('SELECT DISTINCT tipo_eleicao FROM dim_data WHERE tipo_eleicao IS NOT NULL ORDER BY tipo_eleicao;')["tipo_eleicao"].tolist()
@@ -557,14 +557,14 @@ elif menu == "Simulador de Rotas (Origem → Destino)":
     if direcao.startswith("Para onde"):
         sql_rota = f"""
         SELECT
-            md.municipio || ' (' || md.uf || ')' AS "Cidade de Destino",
+            md.nome || ' (' || md.uf || ')' AS "Cidade de Destino",
             md.regiao AS "Região de Destino",
             SUM(f.quantidade) AS "Total de Eleitores"
         FROM fato_transferencia f
         JOIN dim_municipio mo ON f.municipio_origem_key = mo."key"
         JOIN dim_municipio md ON f.municipio_destino_key = md."key"
         WHERE mo.uf = '{uf_sel}'
-        GROUP BY md.municipio, md.uf, md.regiao
+        GROUP BY md.nome, md.uf, md.regiao
         ORDER BY "Total de Eleitores" DESC
         LIMIT 15;
         """
@@ -573,14 +573,14 @@ elif menu == "Simulador de Rotas (Origem → Destino)":
     else:
         sql_rota = f"""
         SELECT
-            mo.municipio || ' (' || mo.uf || ')' AS "Cidade de Origem",
+            mo.nome || ' (' || mo.uf || ')' AS "Cidade de Origem",
             mo.regiao AS "Região de Origem",
             SUM(f.quantidade) AS "Total de Eleitores"
         FROM fato_transferencia f
         JOIN dim_municipio mo ON f.municipio_origem_key = mo."key"
         JOIN dim_municipio md ON f.municipio_destino_key = md."key"
         WHERE md.uf = '{uf_sel}'
-        GROUP BY mo.municipio, mo.uf, mo.regiao
+        GROUP BY mo.nome, mo.uf, mo.regiao
         ORDER BY "Total de Eleitores" DESC
         LIMIT 15;
         """
