@@ -1,32 +1,5 @@
-# Dependências
-node_modules/
-.pnpm-store/
-
-# Build
-dist/
-dist-ssr/
-*.local
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# Variáveis de Ambiente e Credenciais
-.env
-.env.production
-.env.local
-
-# Testes e Scripts de Desenvolvimento
-tests/
-data_build/
-
-# Sistema e Cache
+__pycache__/
+*.pyc
+.venv/
 .DS_Store
-Thumbs.db
-.vite/
-.temp/
-coverage/
-
 
