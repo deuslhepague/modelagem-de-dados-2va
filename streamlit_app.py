@@ -27,21 +27,23 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Barra Lateral
-st.sidebar.title("🗳️ Painel Analítico TSE")
-st.sidebar.markdown("**Data Warehouse em Esquema Estrela**\nTransferência do Eleitorado (2022 a 2026)")
+st.sidebar.title("🗳️ Painel do Eleitorado (TSE)")
+st.sidebar.markdown("**Transferência de Título no Brasil (2022 a 2026)**")
 
 menu = st.sidebar.radio(
-    "Navegação:",
+    "Escolha o que deseja ver:",
     [
-        "Visão Geral do Estudo de Caso",
+        "Visão Geral",
         "Análise 1: Transferências por Ano e Mês",
-        "Análise 2: Migração Inter-regional (Origem x Destino)",
-        "Análise 3: Municípios que Mais Receberam no Nordeste",
+        "Análise 2: Mudanças entre Regiões (Origem x Destino)",
+        "Análise 3: Cidades que Mais Receberam no Nordeste",
         "Análise 4: Jovens e Escolaridade nas Capitais",
         "Análise 5: Cor/Raça e Gênero nas Regiões",
         "Análise 6: Quilombolas e Intérprete de Libras",
-        "Análise 7: Saldo Migratório dos Estados",
-        "Análise 8: Rota Histórica Nordeste e Sudeste"
+        "Análise 7: Saldo dos Estados (Quem Ganhou x Perdeu)",
+        "Análise 8: Rota Nordeste e Sudeste",
+        "Comparador de Estados",
+        "Explorador Livre (Perfil do Eleitor)"
     ]
 )
 
@@ -51,26 +53,26 @@ st.sidebar.caption("Disciplina: Modelagem de Dados (2ª VA)\nUniversidade Federa
 # -------------------------------------------------------------
 # PÁGINA 1: VISÃO GERAL
 # -------------------------------------------------------------
-if menu == "Visão Geral do Estudo de Caso":
-    st.markdown('<div class="main-header">Estudo de Caso: Transferência do Eleitorado Brasileiro</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Arquitetura de Data Warehouse Dimensional em Esquema Estrela baseada em Dados Abertos do Tribunal Superior Eleitoral (TSE)</div>', unsafe_allow_html=True)
+if menu == "Visão Geral":
+    st.markdown('<div class="main-header">Transferência de Título do Eleitorado Brasileiro</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Painel interativo com dados abertos do Tribunal Superior Eleitoral (TSE) de 2022 a 2026</div>', unsafe_allow_html=True)
     
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Registros na Fato", "11.977.648")
+    col1.metric("Registros na Tabela Principal", "11.977.648")
     col2.metric("Total de Transferências", "12.776.407")
-    col3.metric("Dimensões Analíticas", "10")
-    col4.metric("Período Coberto", "2022 a 2026")
+    col3.metric("Tabelas de Apoio (Dimensões)", "10")
+    col4.metric("Período Analisado", "2022 a 2026")
     
-    st.markdown("### Arquitetura e Modelagem Dimensional")
+    st.markdown("### Como os dados estão organizados")
     st.markdown("""
-    O Data Warehouse adota um **Esquema Estrela (Star Schema)** concebido para análises multidimensionais de alto desempenho:
-    - **Tabela Fato Central:** `fato_transferencia`, consolidando a métrica quantitativa aditiva `quantidade`.
-    - **Dimensão Temporal:** `dim_data` com granularidade mensal, trimestre, semestre e classificação de pleitos (eleição geral, municipal ou sem eleição).
-    - **Dimensão Geográfica Desnormalizada:** `dim_municipio` utilizada com **papel duplo** (Município de Origem e Município de Destino), contemplando município, estado e macrorregião oficial do IBGE.
-    - **Dimensões Sociodemográficas:** Perfil completo contemplando gênero, estado civil, faixa etária, grau de instrução, cor/raça, identidade de gênero, quilombola e intérprete de Libras.
+    Os dados foram organizados no formato **Esquema Estrela** (uma tabela principal central ligada a várias tabelas de apoio, o que deixa as consultas rápidas e fáceis):
+    - **Tabela Principal (Fato):** `fato_transferencia`, que guarda a quantidade de eleitores que mudaram de cidade.
+    - **Tabela de Datas:** `dim_data`, com ano, mês e se houve eleição (geral, municipal ou sem eleição).
+    - **Tabela de Cidades:** `dim_municipio`, usada tanto para a cidade de **origem** (de onde o eleitor saiu) quanto para a cidade de **destino** (para onde ele foi), incluindo estado e região.
+    - **Tabelas de Perfil do Eleitor:** gênero, estado civil, faixa de idade, escolaridade, cor/raça, identidade de gênero, quilombola e necessidade de intérprete de Libras.
     """)
     
-    st.info("💡 **Dica:** Utilize o menu na barra lateral para explorar as 8 análises analíticas multidimensionais.")
+    st.info("💡 **Dica:** Use o menu na barra lateral para ver as 8 análises prontas, comparar dois estados no **Comparador de Estados** ou montar sua própria consulta no **Explorador Livre**.")
 
 # -------------------------------------------------------------
 # ANÁLISE 1
@@ -115,9 +117,9 @@ elif menu == "Análise 1: Transferências por Ano e Mês":
 # -------------------------------------------------------------
 # ANÁLISE 2
 # -------------------------------------------------------------
-elif menu == "Análise 2: Migração Inter-regional (Origem x Destino)":
+elif menu == "Análise 2: Mudanças entre Regiões (Origem x Destino)":
     st.markdown('<div class="main-header">De qual região do país para qual região os eleitores se mudam?</div>', unsafe_allow_html=True)
-    st.markdown("**Objetivo:** Mapear os fluxos migratórios inter-regionais no Brasil, confrontando as macrorregiões de origem e destino.")
+    st.markdown("**Objetivo:** Mostrar as mudanças de eleitores entre as regiões do Brasil (origem e destino).")
     
     sql = """
     SELECT 
@@ -142,16 +144,16 @@ elif menu == "Análise 2: Migração Inter-regional (Origem x Destino)":
     
     st.markdown("""
     <div class="insight-box">
-        <b>Análise dos Resultados:</b> A maior parte das transferências de domicílio eleitoral ocorre dentro da própria região geográfica (migração intra-regional), com destaque para o Sudeste e o Nordeste. Nas migrações inter-regionais de longa distância, a rota Nordeste para o Sudeste lidera o volume absoluto.
+        <b>Análise dos Resultados:</b> A maior parte das transferências de título acontece dentro da própria região (mudanças entre cidades ou estados vizinhos), com destaque para o Sudeste e o Nordeste. Já nas mudanças de longa distância entre regiões diferentes, a rota do Nordeste para o Sudeste é a que tem mais eleitores.
     </div>
     """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
 # ANÁLISE 3
 # -------------------------------------------------------------
-elif menu == "Análise 3: Municípios que Mais Receberam no Nordeste":
-    st.markdown('<div class="main-header">Quais são os municípios que mais receberam eleitores no Nordeste?</div>', unsafe_allow_html=True)
-    st.markdown("**Objetivo:** Identificar os polos atratores municipais no Nordeste e calcular sua participação percentual na região.")
+elif menu == "Análise 3: Cidades que Mais Receberam no Nordeste":
+    st.markdown('<div class="main-header">Quais são as cidades que mais receberam eleitores no Nordeste?</div>', unsafe_allow_html=True)
+    st.markdown("**Objetivo:** Mostrar as cidades do Nordeste que mais atraíram eleitores e quanto cada uma representa do total da região.")
     
     top_n = st.slider("Quantidade de cidades no ranking:", 5, 20, 10)
     
@@ -285,9 +287,9 @@ elif menu == "Análise 6: Quilombolas e Intérprete de Libras":
 # -------------------------------------------------------------
 # ANÁLISE 7
 # -------------------------------------------------------------
-elif menu == "Análise 7: Saldo Migratório dos Estados":
+elif menu == "Análise 7: Saldo dos Estados (Quem Ganhou x Perdeu)":
     st.markdown('<div class="main-header">Quais estados ganharam e quais perderam eleitores?</div>', unsafe_allow_html=True)
-    st.markdown("**Objetivo:** Balanço migratório estadual líquido (entradas menos saídas por Unidade da Federação).")
+    st.markdown("**Objetivo:** Mostrar o saldo de eleitores de cada estado (quantos chegaram menos quantos saíram).")
     
     sql = """
     WITH Entradas AS (
@@ -321,7 +323,7 @@ elif menu == "Análise 7: Saldo Migratório dos Estados":
 # -------------------------------------------------------------
 # ANÁLISE 8
 # -------------------------------------------------------------
-elif menu == "Análise 8: Rota Histórica Nordeste e Sudeste":
+elif menu == "Análise 8: Rota Nordeste e Sudeste":
     st.markdown('<div class="main-header">Quantos eleitores foram do Nordeste para o Sudeste e quantos fizeram o caminho de volta, ano a ano?</div>', unsafe_allow_html=True)
     st.markdown("**Objetivo:** Avaliar a rota histórica Nordeste/Sudeste e comparar o fluxo de ida com a corrente de retorno.")
     
@@ -348,3 +350,88 @@ elif menu == "Análise 8: Rota Histórica Nordeste e Sudeste":
     fig.update_layout(barmode="group", title="Fluxo Comparativo: Nordeste vs. Sudeste Ano a Ano")
     st.plotly_chart(fig, use_container_width=True)
     st.dataframe(df, use_container_width=True)
+
+
+# -------------------------------------------------------------
+# COMPARADOR DE ESTADOS
+# -------------------------------------------------------------
+elif menu == "Comparador de Estados":
+    st.markdown('<div class="main-header">Comparador de Estados</div>', unsafe_allow_html=True)
+    st.markdown("**Objetivo:** Escolha dois estados para comparar lado a lado quantos eleitores chegaram, quantos saíram e qual foi o saldo.")
+
+    ufs_df = executar_consulta('SELECT DISTINCT uf AS "UF" FROM dim_municipio WHERE uf IS NOT NULL ORDER BY uf;')
+    lista_ufs = ufs_df["UF"].tolist()
+
+    col_u1, col_u2 = st.columns(2)
+    uf_a = col_u1.selectbox("Primeiro Estado (UF):", lista_ufs, index=lista_ufs.index("SP") if "SP" in lista_ufs else 0)
+    uf_b = col_u2.selectbox("Segundo Estado (UF):", lista_ufs, index=lista_ufs.index("BA") if "BA" in lista_ufs else 1)
+
+    sql_comp = f"""
+    SELECT
+        uf AS "Estado",
+        SUM(chegaram) AS "Eleitores que Chegaram",
+        SUM(sairam) AS "Eleitores que Saíram",
+        SUM(chegaram) - SUM(sairam) AS "Saldo (Chegaram - Saíram)"
+    FROM (
+        SELECT md.uf AS uf, SUM(f.quantidade) AS chegaram, 0 AS sairam
+        FROM fato_transferencia f
+        JOIN dim_municipio md ON f.municipio_destino_key = md."key"
+        WHERE md.uf IN ('{uf_a}', '{uf_b}')
+        GROUP BY md.uf
+        UNION ALL
+        SELECT mo.uf AS uf, 0 AS chegaram, SUM(f.quantidade) AS sairam
+        FROM fato_transferencia f
+        JOIN dim_municipio mo ON f.municipio_origem_key = mo."key"
+        WHERE mo.uf IN ('{uf_a}', '{uf_b}')
+        GROUP BY mo.uf
+    ) t
+    GROUP BY uf
+    ORDER BY uf;
+    """
+    df_comp = executar_consulta(sql_comp)
+    fig_comp = go.Figure()
+    fig_comp.add_trace(go.Bar(x=df_comp["Estado"], y=df_comp["Eleitores que Chegaram"], name="Chegaram", marker_color="#16a34a"))
+    fig_comp.add_trace(go.Bar(x=df_comp["Estado"], y=df_comp["Eleitores que Saíram"], name="Saíram", marker_color="#dc2626"))
+    fig_comp.update_layout(barmode="group", title=f"Comparação de Entradas e Saídas: {uf_a} vs {uf_b}")
+    st.plotly_chart(fig_comp, use_container_width=True)
+    st.dataframe(df_comp, use_container_width=True)
+
+# -------------------------------------------------------------
+# EXPLORADOR LIVRE (PERFIL DO ELEITOR)
+# -------------------------------------------------------------
+elif menu == "Explorador Livre (Perfil do Eleitor)":
+    st.markdown('<div class="main-header">Explorador Livre: Perfil do Eleitor</div>', unsafe_allow_html=True)
+    st.markdown("**Objetivo:** Escolha uma característica dos eleitores (idade, escolaridade, cor/raça, gênero, etc.) e veja o total de transferências.")
+
+    dimensoes = {
+        "Faixa de Idade": ("dim_faixa_etaria", "faixa_etaria_key", "descricao"),
+        "Escolaridade": ("dim_grau_instrucao", "grau_instrucao_key", "descricao"),
+        "Cor / Raça": ("dim_cor_raca", "cor_raca_key", "descricao"),
+        "Gênero": ("dim_genero", "genero_key", "descricao"),
+        "Estado Civil": ("dim_estado_civil", "estado_civil_key", "descricao"),
+        "Quilombola": ("dim_quilombola", "quilombola_key", "descricao"),
+        "Intérprete de Libras": ("dim_interprete_libras", "interprete_libras_key", "descricao"),
+    }
+
+    col_e1, col_e2 = st.columns(2)
+    escolha = col_e1.selectbox("Escolha a característica:", list(dimensoes.keys()))
+    anos_exp = col_e2.multiselect("Filtrar por Ano (opcional):", [2022, 2023, 2024, 2025, 2026], default=[2022, 2023, 2024, 2025, 2026])
+
+    tabela, fk_col, desc_col = dimensoes[escolha]
+    where_exp = f"WHERE dt.ano IN ({','.join(map(str, anos_exp))})" if anos_exp else ""
+    sql_exp = f"""
+    SELECT
+        d.{desc_col} AS "{escolha}",
+        SUM(f.quantidade) AS "Total de Transferências"
+    FROM fato_transferencia f
+    JOIN {tabela} d ON f.{fk_col} = d."key"
+    JOIN dim_data dt ON f.data_key = dt."key"
+    {where_exp}
+    GROUP BY d.{desc_col}
+    ORDER BY "Total de Transferências" DESC;
+    """
+    df_exp = executar_consulta(sql_exp)
+    fig_exp = px.bar(df_exp, x="Total de Transferências", y=escolha, orientation="h", title=f"Transferências por {escolha}")
+    fig_exp.update_layout(yaxis={"categoryorder": "total ascending"})
+    st.plotly_chart(fig_exp, use_container_width=True)
+    st.dataframe(df_exp, use_container_width=True)
