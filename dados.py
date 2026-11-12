@@ -38,6 +38,17 @@ def get_duckdb_connection():
         _duckdb_con.execute(f"CREATE VIEW IF NOT EXISTS fato_transferencia AS SELECT * FROM read_parquet('{fato_pattern}');")
     return _duckdb_con
 
+def _corrigir_encoding_texto(df: pd.DataFrame) -> pd.DataFrame:
+    """Corrige sequências '????' geradas por perda de encoding na origem."""
+    for col in df.select_dtypes(include=["object", "string"]).columns:
+        df[col] = (
+            df[col]
+            .astype(str)
+            .str.replace("????", "çã", regex=False)
+        )
+    return df
+
+
 def executar_consulta(sql_query: str) -> pd.DataFrame:
     """Executa a consulta SQL no backend ativo (DuckDB/Parquet ou MySQL)."""
     if DW_MODE == "mysql":
@@ -46,7 +57,8 @@ def executar_consulta(sql_query: str) -> pd.DataFrame:
             # Ativar ANSI_QUOTES para compatibilidade com aspas duplas em "key"
             conn.execute("SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES');")
             df = pd.read_sql(sql_query, conn)
-            return df
+            return _corrigir_encoding_texto(df)
     else:
         con = get_duckdb_connection()
-        return con.execute(sql_query).fetchdf()
+        df = con.execute(sql_query).fetchdf()
+        return _corrigir_encoding_texto(df)
