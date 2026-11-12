@@ -51,15 +51,16 @@ menu = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔍 Filtros Globais (Visão Geral)")
 
-@st.cache_data(ttl=3600)
-def carregar_opcoes_filtros():
-    anos = executar_consulta('SELECT DISTINCT ano FROM dim_data WHERE ano > 0 ORDER BY ano;')["ano"].tolist()
+@st.cache_data(ttl=60)
+def carregar_opcoes_filtros_v2():
+    anos_raw = executar_consulta('SELECT DISTINCT ano FROM dim_data ORDER BY ano;')["ano"].tolist()
+    anos = ["Não informado" if a == 0 else a for a in anos_raw]
     regioes = executar_consulta('SELECT DISTINCT regiao FROM dim_municipio WHERE regiao IS NOT NULL ORDER BY regiao;')["regiao"].tolist()
     ufs = executar_consulta('SELECT DISTINCT uf FROM dim_municipio WHERE uf IS NOT NULL ORDER BY uf;')["uf"].tolist()
     eleicoes = executar_consulta('SELECT DISTINCT tipo_eleicao FROM dim_data WHERE tipo_eleicao IS NOT NULL ORDER BY tipo_eleicao;')["tipo_eleicao"].tolist()
     return anos, regioes, ufs, eleicoes
 
-op_anos, op_regioes, op_ufs, op_eleicoes = carregar_opcoes_filtros()
+op_anos, op_regioes, op_ufs, op_eleicoes = carregar_opcoes_filtros_v2()
 
 f_anos = st.sidebar.multiselect("Anos:", op_anos, default=op_anos, key="g_anos")
 f_eleicao = st.sidebar.multiselect("Tipo de Eleição:", op_eleicoes, default=op_eleicoes, key="g_eleicao")
@@ -70,10 +71,11 @@ f_uf_dest = st.sidebar.multiselect("Estado de Destino (UF):", op_ufs, default=[]
 def montar_where_global():
     conds = []
     if f_anos:
-        conds.append(f"d.ano IN ({','.join(map(str, f_anos))})")
+        anos_sql = [0 if a == "Não informado" else int(a) for a in f_anos]
+        conds.append(f"d.ano IN ({','.join(map(str, anos_sql))})")
     if f_eleicao:
         vals = ",".join(f"'{e}'" for e in f_eleicao)
-        conds.append(f"d.tipo_eleicao IN ({vals})")
+        conds.append(f"REPLACE(REPLACE(d.tipo_eleicao, '????', 'çã'), '??', 'ã') IN ({vals})")
     if f_reg_orig:
         vals = ",".join(f"'{r}'" for r in f_reg_orig)
         conds.append(f"mo.regiao IN ({vals})")
