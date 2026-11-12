@@ -43,9 +43,47 @@ menu = st.sidebar.radio(
         "Análise 7: Saldo dos Estados (Quem Ganhou x Perdeu)",
         "Análise 8: Rota Nordeste e Sudeste",
         "Comparador de Estados",
-        "Explorador Livre (Perfil do Eleitor)"
+        "Explorador Livre (Perfil do Eleitor)",
+        "Simulador de Rotas (Origem → Destino)"
     ]
 )
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔍 Filtros Globais (Visão Geral)")
+
+@st.cache_data(ttl=3600)
+def carregar_opcoes_filtros():
+    anos = executar_consulta('SELECT DISTINCT ano FROM dim_data ORDER BY ano;')["ano"].tolist()
+    regioes = executar_consulta('SELECT DISTINCT regiao FROM dim_municipio WHERE regiao IS NOT NULL ORDER BY regiao;')["regiao"].tolist()
+    ufs = executar_consulta('SELECT DISTINCT uf FROM dim_municipio WHERE uf IS NOT NULL ORDER BY uf;')["uf"].tolist()
+    eleicoes = executar_consulta('SELECT DISTINCT tipo_eleicao FROM dim_data WHERE tipo_eleicao IS NOT NULL ORDER BY tipo_eleicao;')["tipo_eleicao"].tolist()
+    return anos, regioes, ufs, eleicoes
+
+op_anos, op_regioes, op_ufs, op_eleicoes = carregar_opcoes_filtros()
+
+f_anos = st.sidebar.multiselect("Anos:", op_anos, default=op_anos, key="g_anos")
+f_eleicao = st.sidebar.multiselect("Tipo de Eleição:", op_eleicoes, default=op_eleicoes, key="g_eleicao")
+f_reg_orig = st.sidebar.multiselect("Região de Origem:", op_regioes, default=[], key="g_reg_orig")
+f_reg_dest = st.sidebar.multiselect("Região de Destino:", op_regioes, default=[], key="g_reg_dest")
+f_uf_dest = st.sidebar.multiselect("Estado de Destino (UF):", op_ufs, default=[], key="g_uf_dest")
+
+def montar_where_global():
+    conds = []
+    if f_anos:
+        conds.append(f"d.ano IN ({','.join(map(str, f_anos))})")
+    if f_eleicao:
+        vals = ",".join(f"'{e}'" for e in f_eleicao)
+        conds.append(f"d.tipo_eleicao IN ({vals})")
+    if f_reg_orig:
+        vals = ",".join(f"'{r}'" for r in f_reg_orig)
+        conds.append(f"mo.regiao IN ({vals})")
+    if f_reg_dest:
+        vals = ",".join(f"'{r}'" for r in f_reg_dest)
+        conds.append(f"md.regiao IN ({vals})")
+    if f_uf_dest:
+        vals = ",".join(f"'{u}'" for u in f_uf_dest)
+        conds.append(f"md.uf IN ({vals})")
+    return ("WHERE " + " AND ".join(conds)) if conds else ""
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Disciplina: Modelagem de Dados (2ª VA)\nUniversidade Federal Rural de Pernambuco (UFRPE)")
@@ -56,23 +94,91 @@ st.sidebar.caption("Disciplina: Modelagem de Dados (2ª VA)\nUniversidade Federa
 if menu == "Visão Geral":
     st.markdown('<div class="main-header">Transferência de Título do Eleitorado Brasileiro</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Painel interativo com dados abertos do Tribunal Superior Eleitoral (TSE) de 2022 a 2026</div>', unsafe_allow_html=True)
-    
+
+    where_g = montar_where_global()
+    sql_kpi = f"""
+    SELECT
+        COALESCE(SUM(f.quantidade), 0) AS total,
+        COUNT(*) AS registros
+    FROM fato_transferencia f
+    JOIN dim_data d ON f.data_key = d."key"
+    JOIN dim_municipio mo ON f.municipio_origem_key = mo."key"
+    JOIN dim_municipio md ON f.municipio_destino_key = md."key"
+    {where_g};
+    """
+    kpi_df = executar_consulta(sql_kpi)
+    total_transf = int(kpi_df["total"].iloc[0])
+    total_reg = int(kpi_df["registros"].iloc[0])
+
+    sql_top_uf = f"""
+    SELECT md.uf AS uf, SUM(f.quantidade) AS total
+    FROM fato_transferencia f
+    JOIN dim_data d ON f.data_key = d."key"
+    JOIN dim_municipio mo ON f.municipio_origem_key = mo."key"
+    JOIN dim_municipio md ON f.municipio_destino_key = md."key"
+    {where_g}
+    GROUP BY md.uf
+    ORDER BY total DESC
+    LIMIT 1;
+    """
+    top_uf_df = executar_consulta(sql_top_uf)
+    top_uf = top_uf_df["uf"].iloc[0] if not top_uf_df.empty else "-"
+
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Registros na Tabela Principal", "11.977.648")
-    col2.metric("Total de Transferências", "12.776.407")
-    col3.metric("Tabelas de Apoio (Dimensões)", "10")
+    col1.metric("Transferências (Filtro Atual)", f"{total_transf:,}".replace(",", "."))
+    col2.metric("Linhas Analisadas", f"{total_reg:,}".replace(",", "."))
+    col3.metric("Estado que Mais Recebeu", top_uf)
     col4.metric("Período Analisado", "2022 a 2026")
-    
-    st.markdown("### Como os dados estão organizados")
-    st.markdown("""
-    Os dados foram organizados no formato **Esquema Estrela** (uma tabela principal central ligada a várias tabelas de apoio, o que deixa as consultas rápidas e fáceis):
-    - **Tabela Principal (Fato):** `fato_transferencia`, que guarda a quantidade de eleitores que mudaram de cidade.
-    - **Tabela de Datas:** `dim_data`, com ano, mês e se houve eleição (geral, municipal ou sem eleição).
-    - **Tabela de Cidades:** `dim_municipio`, usada tanto para a cidade de **origem** (de onde o eleitor saiu) quanto para a cidade de **destino** (para onde ele foi), incluindo estado e região.
-    - **Tabelas de Perfil do Eleitor:** gênero, estado civil, faixa de idade, escolaridade, cor/raça, identidade de gênero, quilombola e necessidade de intérprete de Libras.
-    """)
-    
-    st.info("💡 **Dica:** Use o menu na barra lateral para ver as 8 análises prontas, comparar dois estados no **Comparador de Estados** ou montar sua própria consulta no **Explorador Livre**.")
+
+    st.markdown("### Relação entre Chegadas e Saídas por Estado")
+    sql_disp = f"""
+    SELECT
+        uf AS "Estado",
+        regiao AS "Região",
+        SUM(chegaram) AS "Eleitores que Chegaram",
+        SUM(sairam) AS "Eleitores que Saíram"
+    FROM (
+        SELECT md.uf AS uf, md.regiao AS regiao, SUM(f.quantidade) AS chegaram, 0 AS sairam
+        FROM fato_transferencia f
+        JOIN dim_data d ON f.data_key = d."key"
+        JOIN dim_municipio mo ON f.municipio_origem_key = mo."key"
+        JOIN dim_municipio md ON f.municipio_destino_key = md."key"
+        {where_g}
+        GROUP BY md.uf, md.regiao
+        UNION ALL
+        SELECT mo.uf AS uf, mo.regiao AS regiao, 0 AS chegaram, SUM(f.quantidade) AS sairam
+        FROM fato_transferencia f
+        JOIN dim_data d ON f.data_key = d."key"
+        JOIN dim_municipio mo ON f.municipio_origem_key = mo."key"
+        JOIN dim_municipio md ON f.municipio_destino_key = md."key"
+        {where_g}
+        GROUP BY mo.uf, mo.regiao
+    ) t
+    GROUP BY uf, regiao;
+    """
+    df_disp = executar_consulta(sql_disp)
+    if not df_disp.empty:
+        fig_disp = px.scatter(
+            df_disp,
+            x="Eleitores que Saíram",
+            y="Eleitores que Chegaram",
+            color="Região",
+            text="Estado",
+            title="Cada ponto é um estado: quanto mais para cima, mais eleitores chegaram; quanto mais para a direita, mais saíram"
+        )
+        fig_disp.update_traces(textposition="top center", marker=dict(size=10))
+        st.plotly_chart(fig_disp, use_container_width=True)
+
+    with st.expander("📐 Ver como os dados estão organizados (Esquema Estrela)"):
+        st.markdown("""
+        Os dados foram organizados no formato **Esquema Estrela** (uma tabela principal central ligada a várias tabelas de apoio):
+        - **Tabela Principal (Fato):** `fato_transferencia`, que guarda a quantidade de eleitores que mudaram de cidade.
+        - **Tabela de Datas:** `dim_data`, com ano, mês e se houve eleição (geral, municipal ou sem eleição).
+        - **Tabela de Cidades:** `dim_municipio`, usada tanto para a cidade de **origem** quanto para a cidade de **destino**.
+        - **Tabelas de Perfil do Eleitor:** gênero, estado civil, faixa de idade, escolaridade, cor/raça, identidade de gênero, quilombola e intérprete de Libras.
+        """)
+
+    st.info("💡 **Dica:** Use os filtros na barra lateral para atualizar os números acima ou escolha uma das análises no menu.")
 
 # -------------------------------------------------------------
 # ANÁLISE 1
@@ -435,3 +541,55 @@ elif menu == "Explorador Livre (Perfil do Eleitor)":
     fig_exp.update_layout(yaxis={"categoryorder": "total ascending"})
     st.plotly_chart(fig_exp, use_container_width=True)
     st.dataframe(df_exp, use_container_width=True)
+
+
+# -------------------------------------------------------------
+# SIMULADOR DE ROTAS (ORIGEM -> DESTINO)
+# -------------------------------------------------------------
+elif menu == "Simulador de Rotas (Origem → Destino)":
+    st.markdown('<div class="main-header">Simulador de Rotas (De Onde Para Onde)</div>', unsafe_allow_html=True)
+    st.markdown("**Objetivo:** Escolha um estado de origem e descubra para quais cidades os eleitores mais se mudaram (ou o contrário).")
+
+    col_r1, col_r2 = st.columns(2)
+    direcao = col_r1.radio("O que você quer ver?", ["Para onde foram os eleitores que saíram de...", "De onde vieram os eleitores que chegaram em..."])
+    uf_sel = col_r2.selectbox("Escolha o Estado (UF):", op_ufs, index=op_ufs.index("PE") if "PE" in op_ufs else 0)
+
+    if direcao.startswith("Para onde"):
+        sql_rota = f"""
+        SELECT
+            md.municipio || ' (' || md.uf || ')' AS "Cidade de Destino",
+            md.regiao AS "Região de Destino",
+            SUM(f.quantidade) AS "Total de Eleitores"
+        FROM fato_transferencia f
+        JOIN dim_municipio mo ON f.municipio_origem_key = mo."key"
+        JOIN dim_municipio md ON f.municipio_destino_key = md."key"
+        WHERE mo.uf = '{uf_sel}'
+        GROUP BY md.municipio, md.uf, md.regiao
+        ORDER BY "Total de Eleitores" DESC
+        LIMIT 15;
+        """
+        eixo_y = "Cidade de Destino"
+        titulo_r = f"Top 15 cidades que mais receberam eleitores saindo de {uf_sel}"
+    else:
+        sql_rota = f"""
+        SELECT
+            mo.municipio || ' (' || mo.uf || ')' AS "Cidade de Origem",
+            mo.regiao AS "Região de Origem",
+            SUM(f.quantidade) AS "Total de Eleitores"
+        FROM fato_transferencia f
+        JOIN dim_municipio mo ON f.municipio_origem_key = mo."key"
+        JOIN dim_municipio md ON f.municipio_destino_key = md."key"
+        WHERE md.uf = '{uf_sel}'
+        GROUP BY mo.municipio, mo.uf, mo.regiao
+        ORDER BY "Total de Eleitores" DESC
+        LIMIT 15;
+        """
+        eixo_y = "Cidade de Origem"
+        titulo_r = f"Top 15 cidades de onde mais saíram eleitores para {uf_sel}"
+
+    df_rota = executar_consulta(sql_rota)
+    fig_rota = px.bar(df_rota, x="Total de Eleitores", y=eixo_y, color=df_rota.columns[1], orientation="h", title=titulo_r)
+    fig_rota.update_layout(yaxis={"categoryorder": "total ascending"})
+    st.plotly_chart(fig_rota, use_container_width=True)
+    st.dataframe(df_rota, use_container_width=True)
+    st.download_button("📥 Baixar Tabela (CSV)", df_rota.to_csv(index=False).encode("utf-8"), file_name=f"rotas_{uf_sel}.csv", mime="text/csv")
