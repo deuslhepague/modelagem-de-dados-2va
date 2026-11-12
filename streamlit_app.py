@@ -19,10 +19,10 @@ st.set_page_config(
 # Estilo visual moderno
 st.markdown("""
 <style>
-    .main-header { font-size: 2.2rem; font-weight: 700; color: #1e3a8a; margin-bottom: 0.2rem; }
-    .sub-header { font-size: 1.05rem; color: #475569; margin-bottom: 1.5rem; }
-    .metric-card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; }
-    .insight-box { background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 14px; border-radius: 4px; margin-top: 15px; }
+    .main-header { font-size: 2.2rem; font-weight: 700; color: #3b82f6; margin-bottom: 0.2rem; }
+    .sub-header { font-size: 1.05rem; opacity: 0.8; margin-bottom: 1.5rem; }
+    .metric-card { background-color: #f8fafc; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; }
+    .insight-box { background-color: #eff6ff; color: #0f172a; border-left: 4px solid #2563eb; padding: 14px; border-radius: 4px; margin-top: 15px; }
 </style>
 """, unsafe_allow_html=True)
 
